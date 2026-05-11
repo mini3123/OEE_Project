@@ -20,3 +20,10 @@
 .period-btn:hover, .period-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
 
 .filter-bar { margin-bottom: 20px; }
+
+@media (max-width: 900px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+    .kpi-grid { grid-template-columns: 1fr; }
+}
