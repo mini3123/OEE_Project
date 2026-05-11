@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>교대별 OEE</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-dark bg-dark px-4">
+        <span class="navbar-brand fw-bold">아진산업 OEE 모니터링</span>
+        <div>
+            <a href="#" class="btn btn-outline-light me-2">메인</a>
+            <a href="#" class="btn btn-outline-light me-2">고장 분석</a>
+            <a href="#" class="btn btn-outline-light me-2">유지보수</a>
+            <a href="#" class="btn btn-outline-light">교대별 OEE</a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+
+        <!-- KPI 카드 -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-white bg-primary">
+                    <div class="card-body">
+                        <h6 class="card-title">A조 평균 OEE</h6>
+                        <h3>91.4%</h3>
+                        <small>가동률 93.2% &nbsp; 성능률 101.1% &nbsp; 품질률 98.3%</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-success">
+                    <div class="card-body">
+                        <h6 class="card-title">B조 평균 OEE</h6>
+                        <h3>89.7%</h3>
+                        <small>가동률 91.5% &nbsp; 성능률 100.9% &nbsp; 품질률 97.8%</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-warning">
+                    <div class="card-body">
+                        <h6 class="card-title">C조 평균 OEE</h6>
+                        <h3>88.2%</h3>
+                        <small>가동률 90.1% &nbsp; 성능률 100.7% &nbsp; 품질률 97.5%</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 차트 -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card bg-white p-3">
+                    <h5>교대 × 설비별 평균 OEE</h5>
+                    <canvas id="shiftChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 필터 -->
+        <div class="card bg-white p-3 mb-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label mb-1">설비</label>
+                    <select class="form-select form-select-sm">
+                        <option>전체</option><option>M1</option><option>M2</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1">교대</label>
+                    <select class="form-select form-select-sm">
+                        <option>전체</option><option>A조</option><option>B조</option><option>C조</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-1">시작일</label>
+                    <input type="date" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-1">종료일</label>
+                    <input type="date" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-1">
+                    <button class="btn btn-sm btn-secondary w-100">초기화</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 테이블 -->
+        <h4 class="mb-3">교대별 OEE 현황</h4>
+        <table class="table table-bordered table-hover bg-white">
+            <thead class="table-dark">
+                <tr>
+                    <th>설비명</th>
+                    <th><button class="btn btn-sm btn-dark p-0 px-1">날짜 ↓</button></th>
+                    <th>교대</th>
+                    <th>가동률</th>
+                    <th>성능률</th>
+                    <th>품질률</th>
+                    <th>OEE</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>M1</td><td>2026-05-31</td><td>A조</td><td>93.2%</td><td>101.4%</td><td>98.5%</td><td>92.6%</td></tr>
+                <tr><td>M1</td><td>2026-05-31</td><td>B조</td><td>91.5%</td><td>100.9%</td><td>97.9%</td><td>90.3%</td></tr>
+                <tr><td>M1</td><td>2026-05-31</td><td>C조</td><td>90.1%</td><td>100.7%</td><td>97.6%</td><td>88.7%</td></tr>
+                <tr><td>M2</td><td>2026-05-31</td><td>A조</td><td>91.0%</td><td>101.2%</td><td>98.1%</td><td>90.5%</td></tr>
+                <tr><td>M2</td><td>2026-05-31</td><td>B조</td><td>89.3%</td><td>100.8%</td><td>97.7%</td><td>87.9%</td></tr>
+                <tr><td>M2</td><td>2026-05-31</td><td>C조</td><td>87.8%</td><td>100.5%</td><td>97.4%</td><td>86.1%</td></tr>
+            </tbody>
+        </table>
+
+    </div>
+
+    <script>
+        new Chart(document.getElementById('shiftChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['A조', 'B조', 'C조'],
+                datasets: [
+                    { label: 'M1', data: [92.1, 90.4, 88.9], backgroundColor: 'rgba(54,162,235,0.7)' },
+                    { label: 'M2', data: [90.5, 88.7, 86.8], backgroundColor: 'rgba(255,99,132,0.7)' }
+                ]
+            },
+            options: { scales: { y: { beginAtZero: true, max: 100 } } }
+        });
+    </script>
+</body>
+</html>

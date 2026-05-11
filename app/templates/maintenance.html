@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>유지보수 이력 - 아진산업 OEE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/maintenance.css') }}">
+</head>
+<body>
+
+<nav class="navbar navbar-dark">
+    <a href="/" style="text-decoration:none" class="brand-wrap">
+        <svg class="brand-logo" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="20" cy="20" r="18" stroke="#F5A800" stroke-width="2.5" fill="none"/>
+            <circle cx="20" cy="20" r="6" stroke="#F5A800" stroke-width="2" fill="none"/>
+            <line x1="20" y1="2" x2="20" y2="14" stroke="#F5A800" stroke-width="2.5"/>
+            <line x1="5.4" y1="29" x2="14.5" y2="23.5" stroke="#F5A800" stroke-width="2.5"/>
+            <line x1="34.6" y1="29" x2="25.5" y2="23.5" stroke="#F5A800" stroke-width="2.5"/>
+        </svg>
+        <div>
+            <div class="brand-text"><span>AJIN</span> INDUSTRIAL</div>
+            <div class="brand-sub">OEE Monitoring System</div>
+        </div>
+    </a>
+    <div style="display:flex; align-items:center; gap:16px;">
+        <div class="nav-links">
+            <a href="/dashboard" class="nav-link-item" data-i18n="nav_main">메인</a>
+            <a href="/failure" class="nav-link-item" data-i18n="nav_failure">고장 분석</a>
+            <a href="/maintenance" class="nav-link-item active" data-i18n="nav_maint">유지보수</a>
+            <a href="/shift" class="nav-link-item" data-i18n="nav_shift">교대별 OEE</a>
+        </div>
+        <button id="langBtn" class="lang-btn" onclick="toggleLang()">EN</button>
+        <div style="display:flex;align-items:center;gap:5px;padding:0 8px;border-left:1px solid var(--border);">
+            <span id="simDot" style="font-size:8px;color:var(--text-muted);">●</span>
+            <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.1em;color:var(--text-muted);">DATA</span>
+            <button id="simBtn" onclick="toggleSim()" style="background:transparent;border:1px solid var(--border);color:var(--text-muted);border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;padding:2px 10px;cursor:pointer;transition:all 0.2s;">OFF</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+            <div onclick="toggleRefresh()" style="display:flex;align-items:center;gap:5px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.1em;color:var(--text-muted);">
+                <span id="_dot" style="font-size:8px;color:var(--success);">●</span>
+                LIVE
+            </div>
+            <select id="_intSel" class="nav-sel" onchange="setRefreshInterval()">
+                <option value="0">10s</option>
+                <option value="1">30s</option>
+                <option value="2">1m</option>
+                <option value="3">5m</option>
+            </select>
+            <span id="_cd" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--text-muted);min-width:20px;text-align:right;"></span>
+        </div>
+    </div>
+</nav>
+
+<div class="page-wrap">
+    <div class="page-title" data-i18n="page_title">유지보수 이력</div>
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <div class="summary-icon icon-regular">🔧</div>
+            <div>
+                <div class="summary-count count-regular">{{ maintenance_data | selectattr('type', 'equalto', '정기점검') | list | length }}</div>
+                <div class="summary-name" data-i18n="type_regular">정기점검</div>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon icon-parts">⚙️</div>
+            <div>
+                <div class="summary-count count-parts">{{ maintenance_data | selectattr('type', 'equalto', '부품교체') | list | length }}</div>
+                <div class="summary-name" data-i18n="type_parts">부품교체</div>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon icon-emergency">⚠️</div>
+            <div>
+                <div class="summary-count count-emergency">{{ maintenance_data | selectattr('type', 'equalto', '긴급수리') | list | length }}</div>
+                <div class="summary-name" data-i18n="type_emergency">긴급수리</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <div class="filter-group">
+            <span class="filter-label" data-i18n="filter_type">유형</span>
+            <select id="filterType" class="form-select" style="width:130px" onchange="applyFilter()">
+                <option value="" data-i18n="opt_all">전체</option>
+                <option value="정기점검" data-i18n="type_regular">정기점검</option>
+                <option value="부품교체" data-i18n="type_parts">부품교체</option>
+                <option value="긴급수리" data-i18n="type_emergency">긴급수리</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label" data-i18n="filter_equip">설비</span>
+            <select id="filterEquip" class="form-select" style="width:100px" onchange="applyFilter()">
+                <option value="">전체</option>
+                <option value="M1">M1</option>
+                <option value="M2">M2</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label" data-i18n="filter_start">시작일</span>
+            <input type="date" id="filterStart" class="form-control" style="width:145px" onchange="applyFilter()">
+        </div>
+        <div class="filter-group">
+            <span class="filter-label" data-i18n="filter_end">종료일</span>
+            <input type="date" id="filterEnd" class="form-control" style="width:145px" onchange="applyFilter()">
+        </div>
+        <button class="btn-reset" onclick="resetFilter()" data-i18n="btn_reset">초기화</button>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div class="section-label" data-i18n="section_log">유지보수 이력</div>
+        <button class="btn-reset" onclick="downloadCSV('유지보수_이력.csv')" data-i18n="btn_csv">CSV 다운로드</button>
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th data-i18n="col_date">날짜</th>
+                <th data-i18n="col_equip">설비명</th>
+                <th data-i18n="col_type">점검 유형</th>
+                <th data-i18n="col_engineer">담당자</th>
+                <th data-i18n="col_shift">조</th>
+                <th data-i18n="col_note">비고</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% set type_class = {'정기점검': 'type-regular', '부품교체': 'type-parts', '긴급수리': 'type-emergency'} %}
+            {% set shift_class = {'A': 'shift-a', 'B': 'shift-b', 'C': 'shift-c'} %}
+            {% for row in maintenance_data %}
+            <tr data-filtered="1" data-type="{{ row.type }}" data-equip="{{ row.equipment_name }}">
+                <td>{{ row.maintenance_date }}</td>
+                <td>{{ row.equipment_name }}</td>
+                <td><span class="badge-type {{ type_class[row.type] if row.type in type_class else '' }}" data-type-key="{{ row.type }}">{{ row.type }}</span></td>
+                <td>{{ row.engineer }}</td>
+                <td><span class="badge-shift {{ shift_class[row.shift] if row.shift in shift_class else '' }}" data-i18n="shift_{{ row.shift.lower() if row.shift else 'a' }}">{{ row.shift }}조</span></td>
+                <td data-note-raw="{{ row.note }}">{{ row.note }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;">
+        <span id="pageInfo" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--text-muted);letter-spacing:0.06em;"></span>
+        <div style="display:flex;gap:6px;align-items:center;">
+            <button class="btn-reset" id="pagePrev" onclick="changePage(-1)" data-i18n="prev">← 이전</button>
+            <span id="pageNum" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--text-secondary);padding:0 8px;"></span>
+            <button class="btn-reset" id="pageNext" onclick="changePage(1)" data-i18n="next">다음 →</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/sim.js') }}"></script>
+<script src="{{ url_for('static', filename='js/live.js') }}"></script>
+<script src="{{ url_for('static', filename='js/maintenance.js') }}"></script>
+</body>
+</html>

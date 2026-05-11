@@ -1,0 +1,22 @@
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.kpi-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px 22px; position: relative; overflow: hidden; transition: all 0.25s; animation: fadeUp 0.5s ease both; }
+.kpi-card:nth-child(1) { animation-delay: 0.05s; } .kpi-card:nth-child(2) { animation-delay: 0.1s; } .kpi-card:nth-child(3) { animation-delay: 0.15s; } .kpi-card:nth-child(4) { animation-delay: 0.2s; }
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); opacity: 0; transition: opacity 0.25s; }
+.kpi-card:hover::before { opacity: 1; }
+.kpi-card:hover { background: var(--bg-card-hover); border-color: var(--accent); }
+.kpi-label { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; letter-spacing: 0.15em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
+.kpi-value { font-family: 'Barlow Condensed', sans-serif; font-size: 36px; font-weight: 800; line-height: 1; color: var(--text-primary); }
+.kpi-value.highlight { color: var(--accent); }
+.kpi-value.success  { color: var(--success); }
+.kpi-badge { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 4px; background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(245,168,0,0.2); }
+
+.data-card { animation-delay: 0.25s; }
+
+.target-wrap { display: flex; align-items: center; gap: 8px; }
+.target-label { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; letter-spacing: 0.1em; color: var(--text-muted); text-transform: uppercase; }
+.target-input { width: 60px; background: var(--bg-base) !important; border: 1px solid var(--border) !important; color: var(--accent) !important; text-align: center; font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; border-radius: 5px; padding: 4px; }
+
+.period-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 4px; padding: 3px 10px; font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+.period-btn:hover, .period-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+.filter-bar { margin-bottom: 20px; }

@@ -1,0 +1,7 @@
+.badge-cause { display: inline-block; padding: 2px 8px; border-radius: 4px; font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; }
+.cause-mech { background: rgba(239,83,80,0.15);  color: #EF5350; border: 1px solid rgba(239,83,80,0.3); }
+.cause-elec { background: rgba(66,165,245,0.15);  color: #42A5F5; border: 1px solid rgba(66,165,245,0.3); }
+.cause-repl { background: rgba(245,168,0,0.15);   color: #F5A800; border: 1px solid rgba(245,168,0,0.3); }
+.cause-mat  { background: rgba(171,71,188,0.15);  color: #AB47BC; border: 1px solid rgba(171,71,188,0.3); }
+.cause-line { background: rgba(38,198,218,0.15);  color: #26C6DA; border: 1px solid rgba(38,198,218,0.3); }
+.cause-qual { background: rgba(34,201,122,0.15);  color: #22C97A; border: 1px solid rgba(34,201,122,0.3); }

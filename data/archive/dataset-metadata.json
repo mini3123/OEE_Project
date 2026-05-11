@@ -1,0 +1,20 @@
+{
+  "title": "Factory OEE & Downtime (Synthetic) \u2014 Starter Dataset",
+  "subtitle": "CC0 synthetic line data for OEE, downtime Pareto, and SPC tutorials.",
+  "description": "Minutely synthetic factory dataset with two machines, downtime causes, scrap, and OEE aggregates. Designed for tutorials and quick experiments without internet access.",
+  "licenses": [
+    {
+      "name": "CC0-1.0"
+    }
+  ],
+  "keywords": [
+    "manufacturing",
+    "oee",
+    "downtime",
+    "spc",
+    "predictive-maintenance",
+    "industrial",
+    "time-series",
+    "synthetic-data"
+  ]
+}

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>아진산업 OEE 모니터링</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<nav class="navbar navbar-dark">
+    <a href="/" style="text-decoration:none" class="brand-wrap">
+        <svg class="brand-logo" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="20" cy="20" r="18" stroke="#F5A800" stroke-width="2.5" fill="none"/>
+            <circle cx="20" cy="20" r="6" stroke="#F5A800" stroke-width="2" fill="none"/>
+            <line x1="20" y1="2" x2="20" y2="14" stroke="#F5A800" stroke-width="2.5"/>
+            <line x1="5.4" y1="29" x2="14.5" y2="23.5" stroke="#F5A800" stroke-width="2.5"/>
+            <line x1="34.6" y1="29" x2="25.5" y2="23.5" stroke="#F5A800" stroke-width="2.5"/>
+        </svg>
+        <div>
+            <div class="brand-text"><span>AJIN</span> INDUSTRIAL</div>
+            <div class="brand-sub">OEE Monitoring System</div>
+        </div>
+    </a>
+    <div style="display:flex; align-items:center; gap:16px;">
+        <div class="nav-links">
+            <a href="/dashboard" class="nav-link-item active" data-i18n="nav_main">메인</a>
+            <a href="/failure" class="nav-link-item" data-i18n="nav_failure">고장 분석</a>
+            <a href="/maintenance" class="nav-link-item" data-i18n="nav_maint">유지보수</a>
+            <a href="/shift" class="nav-link-item" data-i18n="nav_shift">교대별 OEE</a>
+        </div>
+        <button id="langBtn" class="lang-btn" onclick="toggleLang()">EN</button>
+        <div style="display:flex;align-items:center;gap:5px;padding:0 8px;border-left:1px solid var(--border);">
+            <span id="simDot" style="font-size:8px;color:var(--text-muted);">●</span>
+            <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.1em;color:var(--text-muted);">DATA</span>
+            <button id="simBtn" onclick="toggleSim()" style="background:transparent;border:1px solid var(--border);color:var(--text-muted);border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;padding:2px 10px;cursor:pointer;transition:all 0.2s;">OFF</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+            <div onclick="toggleRefresh()" title="클릭하여 켜기/끄기" style="display:flex;align-items:center;gap:5px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.1em;color:var(--text-muted);">
+                <span id="_dot" style="font-size:8px;color:var(--success);">●</span>
+                LIVE
+            </div>
+            <select id="_intSel" class="nav-sel" onchange="setRefreshInterval()">
+                <option value="0">10s</option>
+                <option value="1">30s</option>
+                <option value="2">1m</option>
+                <option value="3">5m</option>
+            </select>
+            <span id="_cd" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--text-muted);min-width:20px;text-align:right;"></span>
+        </div>
+    </div>
+</nav>
+
+<div class="page-wrap">
+    <div class="page-title" data-i18n="page_title">OEE 현황 대시보드</div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-label" id="label_avail" data-i18n="kpi_avail">평균 가동률</div>
+            <div class="kpi-value success" id="kpi_avail">{{ "%.1f"|format(summary.avg_availability * 100) }}%</div>
+            <div class="kpi-badge">AVL</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label" id="label_perf" data-i18n="kpi_perf">평균 성능률</div>
+            <div class="kpi-value highlight" id="kpi_perf">{{ "%.1f"|format(summary.avg_performance * 100) }}%</div>
+            <div class="kpi-badge">PERF</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label" id="label_qual" data-i18n="kpi_qual">평균 품질률</div>
+            <div class="kpi-value success" id="kpi_qual">{{ "%.1f"|format(summary.avg_quality * 100) }}%</div>
+            <div class="kpi-badge">QUAL</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label" id="label_oee" data-i18n="kpi_oee">평균 OEE</div>
+            <div class="kpi-value highlight" id="kpi_oee">{{ "%.1f"|format(summary.avg_oee * 100) }}%</div>
+            <div class="kpi-badge">OEE</div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-8">
+            <div class="data-card" style="height:100%">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+                    <div class="card-title" id="chartTitle" data-i18n="chart_trend">OEE 추이</div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <div style="display:flex;gap:4px;">
+                            <button class="period-btn" id="pb_week" onclick="setPeriod('week')" data-i18n="period_week">주간</button>
+                            <button class="period-btn active" id="pb_month" onclick="setPeriod('month')" data-i18n="period_month">월간</button>
+                            <button class="period-btn" id="pb_all" onclick="setPeriod('all')" data-i18n="period_all">전체</button>
+                            <button class="period-btn" id="pb_ratio" onclick="setPeriod('ratio')" data-i18n="period_ratio">비율</button>
+                        </div>
+                        <div class="target-wrap" id="targetWrap">
+                            <span class="target-label" data-i18n="target">목표선</span>
+                            <input type="number" id="targetInput" value="85" min="0" max="100" class="target-input" oninput="updateTarget()">
+                            <span class="target-label">%</span>
+                        </div>
+                    </div>
+                </div>
+                <canvas id="oeeChart" height="120"></canvas>
+                <canvas id="ratioChart" height="120" style="display:none"></canvas>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="data-card" style="height:100%">
+                <div class="card-title" style="margin-bottom:16px;" data-i18n="chart_bar">설비별 평균 OEE</div>
+                <canvas id="barChart" height="130"></canvas>
+                <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
+                    <div id="trendLabel" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.15em;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">주간 성과</div>
+                    <div id="trendSubLabel" style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">이번주 · 지난주 대비</div>
+                    <div id="trendRows"></div>
+                </div>
+                <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
+                    <div id="monthTrendLabel" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.15em;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;">월간 성과</div>
+                    <div id="monthTrendSubLabel" style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">이번달 · 지난달 대비</div>
+                    <div id="monthTrendRows"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="data-card" style="margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+            <div class="card-title" data-i18n="heatmap">OEE 히트맵</div>
+            <div style="display:flex;gap:4px;">
+                <button class="period-btn" id="hm_week" onclick="setHmPeriod('week')" data-i18n="period_week">주간</button>
+                <button class="period-btn active" id="hm_month" onclick="setHmPeriod('month')" data-i18n="period_month">월간</button>
+                <button class="period-btn" id="hm_all" onclick="setHmPeriod('all')" data-i18n="period_all">전체</button>
+            </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+            <div id="hmWrap" style="overflow-x:auto;flex:1;min-width:0;"></div>
+            <div id="hmColorbarWrap" style="display:flex;gap:5px;flex-shrink:0;">
+                <div id="hmColorbar" style="width:14px;border-radius:3px;background:linear-gradient(to bottom,rgb(34,210,130),rgb(34,170,90) 25%,rgb(245,168,0) 50%,rgb(207,77,74) 75%,rgb(120,30,30));"></div>
+                <div id="hmColorbarLabels" style="display:flex;flex-direction:column;justify-content:space-between;font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--text-muted);font-weight:600;letter-spacing:0.04em;">
+                    <span>95%</span><span>90%</span><span>85%</span><span>80%</span><span>75%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <div class="filter-group">
+            <span class="filter-label" data-i18n="filter_equip">설비</span>
+            <select id="filterEquip" class="form-select" style="width:110px" onchange="applyFilter()">
+                <option value="" data-i18n-opt="opt_all">전체</option>
+                <option value="M1">M1</option>
+                <option value="M2">M2</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label" data-i18n="filter_start">시작일</span>
+            <input type="date" id="filterStart" class="form-control" style="width:145px" onchange="applyFilter()">
+        </div>
+        <div class="filter-group">
+            <span class="filter-label" data-i18n="filter_end">종료일</span>
+            <input type="date" id="filterEnd" class="form-control" style="width:145px" onchange="applyFilter()">
+        </div>
+        <button class="btn-reset" onclick="resetFilter()" data-i18n="btn_reset">초기화</button>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div class="section-label" style="margin:0" data-i18n="oee_status">OEE 현황</div>
+        <button class="btn-reset" onclick="downloadCSV('oee_현황.csv')" data-i18n="btn_csv">CSV 다운로드</button>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th data-i18n="col_equip">설비명</th>
+                <th><button class="sort-btn" onclick="sortTable()"><span data-i18n="col_date">날짜</span> <span id="sortIcon">↓</span></button></th>
+                <th data-i18n="col_avail">가동률</th>
+                <th data-i18n="col_perf">성능률</th>
+                <th data-i18n="col_qual">품질률</th>
+                <th data-i18n="col_oee">OEE</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in oee_data %}
+            <tr data-oee="{{ row.oee }}" data-filtered="1">
+                <td>{{ row.equipment_name }}</td>
+                <td>{{ row.log_date }}</td>
+                <td class="{{ 'val-good' if row.availability >= 0.85 else 'val-warn' }}">{{ "%.1f"|format(row.availability * 100) }}%</td>
+                <td>{{ "%.1f"|format(row.performance * 100) }}%</td>
+                <td class="{{ 'val-good' if row.quality >= 0.98 else 'val-warn' }}">{{ "%.1f"|format(row.quality * 100) }}%</td>
+                <td>{{ "%.1f"|format(row.oee * 100) }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;">
+        <span id="pageInfo" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--text-muted);letter-spacing:0.06em;"></span>
+        <div style="display:flex;gap:6px;align-items:center;">
+            <button class="btn-reset" id="pagePrev" onclick="changePage(-1)" data-i18n="prev">← 이전</button>
+            <span id="pageNum" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--text-secondary);padding:0 8px;"></span>
+            <button class="btn-reset" id="pageNext" onclick="changePage(1)" data-i18n="next">다음 →</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/sim.js') }}"></script>
+<script src="{{ url_for('static', filename='js/live.js') }}"></script>
+<script>
+    window.PAGE_DATA = {
+        chartData: {{ chart_data | tojson }},
+        oeeData:   {{ oee_data | tojson }},
+        barData:   {{ bar_data | tojson }}
+    };
+</script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>아진산업 OEE 모니터링</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;800;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0D0F18; --bg-surface: #13161F;
+            --accent: #F5A800; --accent-dim: rgba(245,168,0,0.1); --accent-glow: rgba(245,168,0,0.3);
+            --text-primary: #E8EAF2; --text-secondary: #7B7F96; --text-muted: #3A3D52;
+            --success: #22C97A; --info: #42A5F5;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { width: 100%; height: 100%; background: var(--bg-base); color: var(--text-primary); font-family: 'Noto Sans KR', sans-serif; overflow: hidden; }
+
+        .bg-grid { position: fixed; inset: 0; background-image: linear-gradient(var(--text-muted) 1px, transparent 1px), linear-gradient(90deg, var(--text-muted) 1px, transparent 1px); background-size: 60px 60px; opacity: 0.18; z-index: 0; }
+        .bg-radial { position: fixed; inset: 0; background: radial-gradient(ellipse 70% 60% at 50% 50%, rgba(245,168,0,0.07) 0%, transparent 70%); z-index: 1; }
+        .bg-vignette { position: fixed; inset: 0; background: radial-gradient(ellipse 100% 100% at 50% 50%, transparent 40%, rgba(13,15,24,0.9) 100%); z-index: 2; }
+        .bg-scanline { position: fixed; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.05) 3px, rgba(0,0,0,0.05) 4px); z-index: 3; pointer-events: none; }
+
+        .cover { position: relative; z-index: 10; width: 100%; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+        .status-bar { position: fixed; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--accent), transparent); z-index: 20; animation: statusPulse 3s ease-in-out infinite; }
+        @keyframes statusPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+        .corner { position: fixed; width: 40px; height: 40px; z-index: 20; }
+        .corner-tl { top: 20px; left: 20px; border-top: 2px solid var(--accent); border-left: 2px solid var(--accent); }
+        .corner-tr { top: 20px; right: 20px; border-top: 2px solid var(--accent); border-right: 2px solid var(--accent); }
+        .corner-bl { bottom: 20px; left: 20px; border-bottom: 2px solid var(--accent); border-left: 2px solid var(--accent); }
+        .corner-br { bottom: 20px; right: 20px; border-bottom: 2px solid var(--accent); border-right: 2px solid var(--accent); }
+
+        .sys-label { position: fixed; font-family: 'Barlow Condensed', sans-serif; font-size: 10px; letter-spacing: 0.2em; color: var(--text-muted); z-index: 20; text-transform: uppercase; }
+        .sys-label.tl { top: 26px; left: 68px; } .sys-label.tr { top: 26px; right: 68px; text-align: right; }
+        .sys-label.bl { bottom: 26px; left: 68px; } .sys-label.br { bottom: 26px; right: 68px; text-align: right; }
+
+        .logo-wrap { display: flex; align-items: center; gap: 28px; margin-bottom: 48px; animation: fadeIn 1s ease 0.2s both; }
+        .logo-svg { width: 90px; height: 90px; animation: logoGlow 4s ease-in-out infinite; }
+        @keyframes logoGlow { 0%, 100% { filter: drop-shadow(0 0 16px rgba(245,168,0,0.3)); } 50% { filter: drop-shadow(0 0 32px rgba(245,168,0,0.6)); } }
+        .logo-divider { width: 1px; height: 80px; background: linear-gradient(to bottom, transparent, var(--accent), transparent); opacity: 0.5; }
+        .logo-main { font-family: 'Barlow Condensed', sans-serif; font-size: 52px; font-weight: 900; letter-spacing: 0.08em; line-height: 1; color: var(--text-primary); }
+        .logo-main span { color: var(--accent); }
+        .logo-sub { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; letter-spacing: 0.28em; color: var(--text-secondary); font-weight: 400; text-transform: uppercase; margin-top: 4px; }
+
+        .title-wrap { text-align: center; margin-bottom: 56px; animation: fadeIn 1s ease 0.45s both; }
+        .title-eyebrow { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; letter-spacing: 0.35em; color: var(--accent); text-transform: uppercase; font-weight: 600; margin-bottom: 14px; }
+        .title-main { font-family: 'Barlow Condensed', sans-serif; font-size: 64px; font-weight: 800; letter-spacing: 0.04em; color: var(--text-primary); line-height: 0.95; text-transform: uppercase; }
+        .title-main em { color: var(--accent); font-style: normal; }
+        .title-desc { font-size: 13px; color: var(--text-secondary); margin-top: 16px; letter-spacing: 0.04em; line-height: 1.6; }
+
+        .divider { display: flex; align-items: center; gap: 16px; margin-bottom: 52px; animation: fadeIn 1s ease 0.6s both; }
+        .divider-line { width: 100px; height: 1px; background: linear-gradient(to right, transparent, var(--accent)); }
+        .divider-line.right { background: linear-gradient(to left, transparent, var(--accent)); }
+        .divider-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+
+        .nav-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; animation: fadeIn 1s ease 0.75s both; }
+        .nav-btn { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 22px 28px; background: rgba(26,29,43,0.8); border: 1px solid rgba(37,40,56,0.8); border-radius: 8px; text-decoration: none; cursor: pointer; transition: all 0.3s ease; position: relative; overflow: hidden; backdrop-filter: blur(8px); }
+        .nav-btn::before { content: ''; position: absolute; inset: 0; background: var(--accent-dim); opacity: 0; transition: opacity 0.3s; }
+        .nav-btn::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: var(--accent); transform: scaleX(0); transition: transform 0.3s ease; }
+        .nav-btn:hover::before { opacity: 1; } .nav-btn:hover::after { transform: scaleX(1); }
+        .nav-btn:hover { border-color: rgba(245,168,0,0.4); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+        .nav-icon { font-size: 28px; line-height: 1; position: relative; z-index: 1; }
+        .nav-label { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.12em; color: var(--text-primary); text-transform: uppercase; position: relative; z-index: 1; }
+        .nav-desc { font-size: 11px; color: var(--text-secondary); letter-spacing: 0.02em; position: relative; z-index: 1; text-align: center; }
+
+        .footer-info { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 32px; z-index: 20; animation: fadeIn 1s ease 1s both; }
+        .footer-stat { text-align: center; }
+        .footer-stat-value { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; color: var(--accent); line-height: 1; }
+        .footer-stat-label { font-family: 'Barlow Condensed', sans-serif; font-size: 9px; letter-spacing: 0.18em; color: var(--text-muted); text-transform: uppercase; margin-top: 3px; }
+        .footer-sep { width: 1px; background: var(--text-muted); opacity: 0.3; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="status-bar"></div>
+<div class="corner corner-tl"></div>
+<div class="corner corner-tr"></div>
+<div class="corner corner-bl"></div>
+<div class="corner corner-br"></div>
+<div class="sys-label tl">KDT-14</div>
+<div class="sys-label tr" id="clock">--:--:--</div>
+<div class="sys-label bl">AJIN INDUSTRIAL CO., LTD.</div>
+<div class="sys-label br">OEE MONITORING SYSTEM</div>
+
+<div class="bg-grid"></div>
+<div class="bg-radial"></div>
+<div class="bg-vignette"></div>
+<div class="bg-scanline"></div>
+
+<div class="cover">
+    <div class="logo-wrap">
+        <svg class="logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="45" stroke="#F5A800" stroke-width="3.5" fill="none"/>
+            <circle cx="50" cy="50" r="14" stroke="#F5A800" stroke-width="3" fill="none"/>
+            <line x1="50" y1="5" x2="50" y2="36" stroke="#F5A800" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="12" y1="72.5" x2="36.5" y2="58.5" stroke="#F5A800" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="88" y1="72.5" x2="63.5" y2="58.5" stroke="#F5A800" stroke-width="3.5" stroke-linecap="round"/>
+            <circle cx="50" cy="50" r="5" fill="#F5A800"/>
+        </svg>
+        <div class="logo-divider"></div>
+        <div>
+            <div class="logo-main"><span>AJIN</span> INDUSTRIAL</div>
+            <div class="logo-sub">CO., LTD. · Since 1990</div>
+        </div>
+    </div>
+
+    <div class="title-wrap">
+        <div class="title-eyebrow">◈ Real-time Production Intelligence</div>
+        <div class="title-main">OEE <em>모니터링</em><br>시스템</div>
+        <div class="title-desc">설비 효율 실시간 분석 · 고장 이력 관리 · 교대별 성과 추적</div>
+    </div>
+
+    <div class="divider">
+        <div class="divider-line"></div>
+        <div class="divider-dot"></div>
+        <div class="divider-line right"></div>
+    </div>
+
+    <div class="nav-grid">
+        <a href="/dashboard" class="nav-btn">
+            <div class="nav-icon">📊</div>
+            <div class="nav-label">메인 대시보드</div>
+            <div class="nav-desc">OEE 종합 현황</div>
+        </a>
+        <a href="/failure" class="nav-btn">
+            <div class="nav-icon">⚠️</div>
+            <div class="nav-label">고장 분석</div>
+            <div class="nav-desc">파레토 · 이력 조회</div>
+        </a>
+        <a href="/maintenance" class="nav-btn">
+            <div class="nav-icon">🔧</div>
+            <div class="nav-label">유지보수</div>
+            <div class="nav-desc">점검 · 수리 이력</div>
+        </a>
+        <a href="/shift" class="nav-btn">
+            <div class="nav-icon">🔥</div>
+            <div class="nav-label">교대별 OEE</div>
+            <div class="nav-desc">A · B · C조 성과</div>
+        </a>
+    </div>
+</div>
+
+<div class="footer-info">
+    <div class="footer-stat">
+        <div class="footer-stat-value">{{ equip_count }}</div>
+        <div class="footer-stat-label">설비</div>
+    </div>
+    <div class="footer-sep"></div>
+    <div class="footer-stat">
+        <div class="footer-stat-value">{{ "%.1f"|format(summary.avg_oee * 100) }}%</div>
+        <div class="footer-stat-label">평균 OEE</div>
+    </div>
+    <div class="footer-sep"></div>
+    <div class="footer-stat">
+        <div class="footer-stat-value">3</div>
+        <div class="footer-stat-label">교대</div>
+    </div>
+    <div class="footer-sep"></div>
+    <div class="footer-stat">
+        <div class="footer-stat-value" id="today-date">--/--</div>
+        <div class="footer-stat-label">오늘</div>
+    </div>
+</div>
+
+<script>
+    function tick() {
+        const now = new Date();
+        document.getElementById('clock').textContent =
+            String(now.getHours()).padStart(2,'0') + ':' +
+            String(now.getMinutes()).padStart(2,'0') + ':' +
+            String(now.getSeconds()).padStart(2,'0');
+        document.getElementById('today-date').textContent =
+            String(now.getMonth()+1).padStart(2,'0') + '/' +
+            String(now.getDate()).padStart(2,'0');
+    }
+    tick();
+    setInterval(tick, 1000);
+</script>
+</body>
+</html>

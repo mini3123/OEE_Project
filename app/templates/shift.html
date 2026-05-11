@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>교대별 OEE - 아진산업 OEE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/shift.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<nav class="navbar navbar-dark">
+    <a href="/" style="text-decoration:none" class="brand-wrap">
+        <svg class="brand-logo" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="20" cy="20" r="18" stroke="#F5A800" stroke-width="2.5" fill="none"/>
+            <circle cx="20" cy="20" r="6" stroke="#F5A800" stroke-width="2" fill="none"/>
+            <line x1="20" y1="2" x2="20" y2="14" stroke="#F5A800" stroke-width="2.5"/>
+            <line x1="5.4" y1="29" x2="14.5" y2="23.5" stroke="#F5A800" stroke-width="2.5"/>
+            <line x1="34.6" y1="29" x2="25.5" y2="23.5" stroke="#F5A800" stroke-width="2.5"/>
+        </svg>
+        <div>
+            <div class="brand-text"><span>AJIN</span> INDUSTRIAL</div>
+            <div class="brand-sub">OEE Monitoring System</div>
+        </div>
+    </a>
+    <div style="display:flex; align-items:center; gap:16px;">
+        <div class="nav-links">
+            <a href="/dashboard" class="nav-link-item" data-i18n="nav_main">메인</a>
+            <a href="/failure" class="nav-link-item" data-i18n="nav_failure">고장 분석</a>
+            <a href="/maintenance" class="nav-link-item" data-i18n="nav_maint">유지보수</a>
+            <a href="/shift" class="nav-link-item active" data-i18n="nav_shift">교대별 OEE</a>
+        </div>
+        <button id="langBtn" class="lang-btn" onclick="toggleLang()">EN</button>
+        <div style="display:flex;align-items:center;gap:5px;padding:0 8px;border-left:1px solid var(--border);">
+            <span id="simDot" style="font-size:8px;color:var(--text-muted);">●</span>
+            <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.1em;color:var(--text-muted);">DATA</span>
+            <button id="simBtn" onclick="toggleSim()" style="background:transparent;border:1px solid var(--border);color:var(--text-muted);border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;padding:2px 10px;cursor:pointer;transition:all 0.2s;">OFF</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+            <div onclick="toggleRefresh()" style="display:flex;align-items:center;gap:5px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.1em;color:var(--text-muted);">
+                <span id="_dot" style="font-size:8px;color:var(--success);">●</span>
+                LIVE
+            </div>
+            <select id="_intSel" class="nav-sel" onchange="setRefreshInterval()">
+                <option value="0">10s</option>
+                <option value="1">30s</option>
+                <option value="2">1m</option>
+                <option value="3">5m</option>
+            </select>
+            <span id="_cd" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--text-muted);min-width:20px;text-align:right;"></span>
+        </div>
+    </div>
+</nav>
+
+<div class="page-wrap">
+    <div class="page-title" data-i18n="page_title">교대별 OEE</div>
+
+    <div class="shift-grid">
+        {% set shift_colors = ['shift-a', 'shift-b', 'shift-c'] %}
+        {% for s in shift_summary %}
+        <div class="shift-card {{ shift_colors[loop.index0] }}">
+            <div class="shift-name" data-i18n="shift_{{ s.shift.lower() }}">{{ s.shift }}조</div>
+            <div class="shift-oee">{{ "%.1f"|format(s.avg_oee * 100) }}%</div>
+            <div class="shift-details">
+                <div class="shift-detail"><span data-i18n="lbl_avail">가동률</span> <span>{{ "%.1f"|format(s.avg_availability * 100) }}%</span></div>
+                <div class="shift-detail"><span data-i18n="lbl_perf">성능률</span> <span>{{ "%.1f"|format(s.avg_performance * 100) }}%</span></div>
+                <div class="shift-detail"><span data-i18n="lbl_qual">품질률</span> <span>{{ "%.1f"|format(s.avg_quality * 100) }}%</span></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="data-card" style="max-width:700px; margin-bottom:24px;">
+        <div class="card-title" data-i18n="chart_title">교대 × 설비별 평균 OEE</div>
+        <canvas id="shiftChart" height="130"></canvas>
+    </div>
+
+    <div class="filter-bar">
+        <div class="filter-group">
+            <span class="filter-label" data-i18n="filter_equip">설비</span>
+            <select id="filterEquip" class="form-select" style="width:110px" onchange="applyFilter()">
+                <option value="">전체</option><option value="M1">M1</option><option value="M2">M2</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label" data-i18n="filter_shift">교대</span>
+            <select id="filterShift" class="form-select" style="width:110px" onchange="applyFilter()">
+                <option value="" data-i18n="opt_all">전체</option>
+                <option value="A" data-i18n="shift_a">A조</option>
+                <option value="B" data-i18n="shift_b">B조</option>
+                <option value="C" data-i18n="shift_c">C조</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label" data-i18n="filter_start">시작일</span>
+            <input type="date" id="filterStart" class="form-control" style="width:145px" onchange="applyFilter()">
+        </div>
+        <div class="filter-group">
+            <span class="filter-label" data-i18n="filter_end">종료일</span>
+            <input type="date" id="filterEnd" class="form-control" style="width:145px" onchange="applyFilter()">
+        </div>
+        <button class="btn-reset" onclick="resetFilter()" data-i18n="btn_reset">초기화</button>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div class="section-label" data-i18n="section_log">교대별 OEE 현황</div>
+        <button class="btn-reset" onclick="downloadCSV('교대별_OEE.csv')" data-i18n="btn_csv">CSV 다운로드</button>
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th data-i18n="col_equip">설비명</th>
+                <th><button class="sort-btn" onclick="sortTable()"><span data-i18n="col_date">날짜</span> <span id="sortIcon">↓</span></button></th>
+                <th data-i18n="col_shift">교대</th>
+                <th data-i18n="col_avail">가동률</th>
+                <th data-i18n="col_perf">성능률</th>
+                <th data-i18n="col_qual">품질률</th>
+                <th>OEE</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% set shift_badge = {'A': 'shift-a-badge', 'B': 'shift-b-badge', 'C': 'shift-c-badge'} %}
+            {% for row in shift_data %}
+            <tr data-filtered="1" data-equip="{{ row.equipment_name }}" data-shift="{{ row.shift }}">
+                <td>{{ row.equipment_name }}</td>
+                <td>{{ row.log_date }}</td>
+                <td><span class="badge-shift {{ shift_badge[row.shift] if row.shift in shift_badge else '' }}" data-i18n="shift_{{ row.shift.lower() if row.shift else 'a' }}">{{ row.shift }}조</span></td>
+                <td class="val-good">{{ "%.1f"|format(row.availability * 100) }}%</td>
+                <td>{{ "%.1f"|format(row.performance * 100) }}%</td>
+                <td class="val-good">{{ "%.1f"|format(row.quality * 100) }}%</td>
+                <td class="val-good">{{ "%.1f"|format(row.oee * 100) }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;">
+        <span id="pageInfo" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--text-muted);letter-spacing:0.06em;"></span>
+        <div style="display:flex;gap:6px;align-items:center;">
+            <button class="btn-reset" id="pagePrev" onclick="changePage(-1)" data-i18n="prev">← 이전</button>
+            <span id="pageNum" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--text-secondary);padding:0 8px;"></span>
+            <button class="btn-reset" id="pageNext" onclick="changePage(1)" data-i18n="next">다음 →</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/sim.js') }}"></script>
+<script src="{{ url_for('static', filename='js/live.js') }}"></script>
+<script>
+    window.PAGE_DATA = {
+        chartRaw: {{ shift_chart | tojson }}
+    };
+</script>
+<script src="{{ url_for('static', filename='js/shift.js') }}"></script>
+</body>
+</html>
