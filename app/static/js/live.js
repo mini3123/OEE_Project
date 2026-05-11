@@ -21,9 +21,13 @@ document.getElementById('_dot').style.color = _on ? 'var(--success)' : 'var(--te
 document.getElementById('_intSel').value = _intIdx;
 document.getElementById('_cd').textContent = _cd;
 
-setInterval(() => {
+const _timer = setInterval(() => {
     if (!_on) { _cd = _INTERVALS[_intIdx]; document.getElementById('_cd').textContent = _cd; return; }
     _cd--;
     document.getElementById('_cd').textContent = _cd;
-    if (_cd <= 0) { document.getElementById('_cd').textContent = '...'; location.reload(); }
+    if (_cd <= 0) {
+        clearInterval(_timer);
+        document.getElementById('_cd').textContent = '...';
+        location.reload();
+    }
 }, 1000);
