@@ -224,27 +224,25 @@ function updateTarget() {
 }
 
 function oeeColor(oee) {
-    const stops = [
-        [0.75, 120, 30, 30],
-        [0.80, 207, 77, 74],
-        [0.85, 245, 168, 0],
-        [0.90, 34, 170, 90],
-        [0.95, 34, 210, 130],
-    ];
-    const v = Math.max(0.75, Math.min(0.95, oee));
-    for (let i = 0; i < stops.length - 1; i++) {
-        const [t0,r0,g0,b0] = stops[i];
-        const [t1,r1,g1,b1] = stops[i+1];
-        if (v <= t1) {
-            const ratio = (v - t0) / (t1 - t0);
-            const r = Math.round(r0 + (r1-r0)*ratio);
-            const g = Math.round(g0 + (g1-g0)*ratio);
-            const b = Math.round(b0 + (b1-b0)*ratio);
-            const textColor = (r*0.299 + g*0.587 + b*0.114) > 140 ? '#111' : '#fff';
-            return [`rgb(${r},${g},${b})`, textColor];
-        }
+    // 85% = white, ±8% 이내에서 진한 색으로 전환 (93%↑ full green, 77%↓ full red)
+    const BASE = 0.85;
+    const RANGE = 0.08;
+    const WHITE = [255, 255, 255];
+    const GREEN = [22, 163, 74];
+    const RED   = [220, 38, 38];
+    let r, g, b;
+    if (oee >= BASE) {
+        const ratio = Math.min((oee - BASE) / RANGE, 1);
+        r = Math.round(WHITE[0] + (GREEN[0] - WHITE[0]) * ratio);
+        g = Math.round(WHITE[1] + (GREEN[1] - WHITE[1]) * ratio);
+        b = Math.round(WHITE[2] + (GREEN[2] - WHITE[2]) * ratio);
+    } else {
+        const ratio = Math.min((BASE - oee) / RANGE, 1);
+        r = Math.round(WHITE[0] + (RED[0] - WHITE[0]) * ratio);
+        g = Math.round(WHITE[1] + (RED[1] - WHITE[1]) * ratio);
+        b = Math.round(WHITE[2] + (RED[2] - WHITE[2]) * ratio);
     }
-    return ['rgb(34,210,130)', '#111'];
+    return [`rgb(${r},${g},${b})`, '#111'];
 }
 function renderHeatmap(period) {
     const data = filterByPeriod(allOeeData, period);

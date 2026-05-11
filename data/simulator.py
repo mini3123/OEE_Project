@@ -72,6 +72,31 @@ def empty_state():
     return {"planned": 0, "running": 0, "total": 0, "good": 0}
 
 
+SHIFT_START = {"A": 0, "B": 480, "C": 960}
+
+
+def restore_day_state_from_shifts(cur, sim_date, eq_ids):
+    """완료된 교대 기록에서 당일 누적 day_state 복원 (근사값)."""
+    day_state = {m: empty_state() for m in MACHINES}
+    for m in MACHINES:
+        eq_id = eq_ids[m]
+        cur.execute(
+            "SELECT availability, performance, quality FROM oee_shift_log "
+            "WHERE equipment_id = %s AND log_date = %s",
+            (eq_id, sim_date)
+        )
+        for avail, perf, qual in cur.fetchall():
+            planned = 480
+            running = round(avail * planned)
+            total   = round(perf * running * IDEAL_RATE) if running > 0 else 0
+            good    = round(qual * total) if total > 0 else 0
+            day_state[m]["planned"] += planned
+            day_state[m]["running"] += running
+            day_state[m]["total"]   += total
+            day_state[m]["good"]    += good
+    return day_state
+
+
 def main(stop_event=None):
     if stop_event is None:
         stop_event = threading.Event()
@@ -82,16 +107,36 @@ def main(stop_event=None):
     last_date = cur.fetchone()[0]
     cur.execute("SELECT equipment_name, equipment_id FROM equipment")
     eq_ids = {row[0]: row[1] for row in cur.fetchall()}
-    cur.close(); conn.close()
 
     sim_date = last_date + timedelta(days=1)
-    sim_min = 0  # 0 = 6:00am, 480 = 2:00pm, 960 = 10:00pm
 
-    day_state = {m: empty_state() for m in MACHINES}
+    # 당일 이미 완료된 교대 확인 → 중단 지점부터 재개
+    cur.execute(
+        "SELECT DISTINCT sl.shift FROM oee_shift_log sl "
+        "JOIN equipment e ON sl.equipment_id = e.equipment_id "
+        "WHERE sl.log_date = %s",
+        (sim_date,)
+    )
+    done_shifts = {row[0] for row in cur.fetchall()}
+    remaining   = [s for s in ("A", "B", "C") if s not in done_shifts]
+
+    if not remaining:
+        # 세 교대 모두 완료됐는데 day_log 없는 엣지케이스 → 다음 날로
+        sim_date += timedelta(days=1)
+        sim_min, current_shift = 0, "A"
+        day_state = {m: empty_state() for m in MACHINES}
+    else:
+        current_shift = remaining[0]
+        sim_min = SHIFT_START[current_shift]
+        day_state = (restore_day_state_from_shifts(cur, sim_date, eq_ids)
+                     if done_shifts else {m: empty_state() for m in MACHINES})
+
+    cur.close(); conn.close()
+
     shift_state = {m: empty_state() for m in MACHINES}
-    current_shift = "A"
 
-    print(f"시뮬레이터 시작 | 시작일: {sim_date} | 틱={MINUTES_PER_TICK}분, 간격={TICK_SLEEP}초")
+    resume_info = f"재개: {sim_date} {current_shift}조({sim_min//60+6:02d}:00~)" if done_shifts else f"시작일: {sim_date}"
+    print(f"시뮬레이터 시작 | {resume_info} | 틱={MINUTES_PER_TICK}분, 간격={TICK_SLEEP}초")
     print(f"1일 = {1440 // MINUTES_PER_TICK * TICK_SLEEP}초 실시간")
 
     while not stop_event.is_set():
