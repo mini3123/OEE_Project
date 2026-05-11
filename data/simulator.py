@@ -25,10 +25,12 @@ TICK_SLEEP = 3          # 실제 대기 초 → 1일 = 24틱 = 72초
 
 def get_conn():
     return mysql.connector.connect(
-        host="127.0.0.1",
+        host=os.getenv("DB_HOST", "127.0.0.1"),
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME")
+        database=os.getenv("DB_NAME"),
+        ssl_disabled=False,
+        ssl_verify_cert=False
     )
 
 
