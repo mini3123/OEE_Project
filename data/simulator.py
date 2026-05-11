@@ -24,15 +24,18 @@ TICK_SLEEP = 3          # 실제 대기 초 → 1일 = 24틱 = 72초
 
 
 def get_conn():
-    return mysql.connector.connect(
+    params = dict(
         host=os.getenv("DB_HOST", "127.0.0.1"),
         port=int(os.getenv("DB_PORT", 3306)),
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
         database=os.getenv("DB_NAME"),
-        ssl_ca=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'ca.pem'),
-        ssl_verify_cert=True
     )
+    ca_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'ca.pem')
+    if os.path.exists(ca_path) and os.getenv("DB_PORT"):
+        params["ssl_ca"] = ca_path
+        params["ssl_verify_cert"] = True
+    return mysql.connector.connect(**params)
 
 
 def shift_of(sim_min):

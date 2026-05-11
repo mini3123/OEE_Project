@@ -23,15 +23,18 @@ app = Flask(__name__, template_folder='app/templates', static_folder='app/static
 
 
 def get_db():
-    conn = mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
+    params = dict(
+        host=os.getenv("DB_HOST", "127.0.0.1"),
         port=int(os.getenv("DB_PORT", 3306)),
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
         database=os.getenv("DB_NAME"),
-        ssl_ca=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ca.pem'),
-        ssl_verify_cert=True
     )
+    ca_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ca.pem')
+    if os.path.exists(ca_path) and os.getenv("DB_PORT"):
+        params["ssl_ca"] = ca_path
+        params["ssl_verify_cert"] = True
+    conn = mysql.connector.connect(**params)
     return conn
 
 @app.route('/')
