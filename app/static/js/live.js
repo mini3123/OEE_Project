@@ -25,5 +25,5 @@ setInterval(() => {
     if (!_on) { _cd = _INTERVALS[_intIdx]; document.getElementById('_cd').textContent = _cd; return; }
     _cd--;
     document.getElementById('_cd').textContent = _cd;
-    if (_cd <= 0) location.reload();
+    if (_cd <= 0) { document.getElementById('_cd').textContent = '...'; location.reload(); }
 }, 1000);
